@@ -1,36 +1,77 @@
+import Container from '@mui/material/Container'
+import Grid from '@mui/material/Grid'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CardActions from '@mui/material/CardActions'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+
+import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { removeItem } from '../store/savedSlice'
 
-function SavedPage({ saved, dispatch }) {
+function SavedPage() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const savedItems = useSelector(state => state.saved.items)
 
-  if (saved.length === 0) {
+  if (savedItems.length === 0) {
     return (
-      <div className="page">
-        <h2>Saved Items</h2>
-        <p>No saved items yet.</p>
-      </div>
+      <Container sx={{ py: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Saved Items
+        </Typography>
+        <Typography color="text.secondary">
+          No saved items yet.
+        </Typography>
+      </Container>
     )
   }
 
   return (
-    <div className="page">
-      <h2>Saved Items ({saved.length})</h2>
+    <Container sx={{ py: 4 }}>
+      <Typography variant="h5" gutterBottom>
+        Saved Items ({savedItems.length})
+      </Typography>
 
-      {saved.map(product => (
-        <div key={product.code}>
-          <h4>{product.product_name}</h4>
-          <p>{product.brands}</p>
+      <Grid container spacing={3}>
+        {savedItems.map(product => (
+          <Grid item xs={12} sm={6} md={4} key={product.code}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6">
+                  {product.product_name}
+                </Typography>
+                <Typography color="text.secondary">
+                  {product.brands}
+                </Typography>
+              </CardContent>
 
-          <button onClick={() => navigate(`/product/${product.code}`)}>
-            View Details
-          </button>
+              <CardActions>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    navigate(`/product/${product.code}`, {
+                      state: { product }
+                    })
+                  }
+                >
+                  View
+                </Button>
 
-          <button onClick={() => dispatch({ type: 'REMOVE', code: product.code })}>
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => dispatch(removeItem(product.code))}
+                >
+                  Remove
+                </Button>
+              </CardActions>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   )
 }
 

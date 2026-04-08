@@ -1,86 +1,106 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import Container from '@mui/material/Container'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Paper from '@mui/material/Paper'
+import Divider from '@mui/material/Divider'
 
-function DetailPage({ saved, dispatch }) {
-  const { barcode } = useParams()
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
+import BookmarkRemoveIcon from '@mui/icons-material/BookmarkRemove'
+
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { addItem, removeItem } from '../store/savedSlice'
+
+function DetailPage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const dispatch = useDispatch()
+  const savedItems = useSelector(state => state.saved.items)
 
-  useEffect(() => {
-    let cancelled = false
+  const product = location.state?.product
 
-    const fetchProduct = async () => {
-      try {
-        const response = await axios.get(
-          `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
-        )
+  if (!product) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Typography>Product not found.</Typography>
+        <Button onClick={() => navigate('/')}>Back to Search</Button>
+      </Container>
+    )
+  }
 
-        if (!cancelled) {
-          if (response.data.status === 1) {
-            setProduct(response.data.product)
-          } else {
-            setProduct(null)
-          }
-          setLoading(false)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError('Could not load product details.')
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchProduct()
-
-    return () => {
-      cancelled = true
-    }
-  }, [barcode])
-
-  const isSaved = saved.some(p => p.code === barcode)
+  const isSaved = savedItems.some(p => p.code === product.code)
 
   const handleSaveToggle = () => {
-    if (!product) return
-
     if (isSaved) {
-      dispatch({ type: 'REMOVE', code: barcode })
+      dispatch(removeItem(product.code))
     } else {
-      dispatch({ type: 'ADD', product })
+      dispatch(addItem(product))
     }
   }
 
-  if (loading) return <p>Loading product details...</p>
-  if (error) return <p>{error}</p>
-  if (!product) return <p>Product not found.</p>
+  const n = product.nutriments || {}
 
   return (
-    <div className="detail-page">
-      <button onClick={() => navigate(-1)}>← Back</button>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(-1)}
+        sx={{ mb: 3 }}
+      >
+        Back
+      </Button>
 
-      <h2>{product.product_name}</h2>
-      <p>{product.brands}</p>
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 3 }}>
+          {product.image_small_url && (
+            <Box
+              component="img"
+              src={product.image_small_url}
+              alt={product.product_name}
+              sx={{ width: 160, height: 160, objectFit: 'contain' }}
+            />
+          )}
 
-      <img src={product.image_small_url} alt={product.product_name} />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h5" gutterBottom>
+              {product.product_name || 'Unknown Product'}
+            </Typography>
 
-      <h3>Nutrition per 100g</h3>
-      <ul>
-        <li>Energy: {product.nutriments.energy_100g}</li>
-        <li>Fat: {product.nutriments.fat_100g}</li>
-        <li>Carbs: {product.nutriments.carbohydrates_100g}</li>
-        <li>Sugars: {product.nutriments.sugars_100g}</li>
-        <li>Protein: {product.nutriments.proteins_100g}</li>
-        <li>Salt: {product.nutriments.salt_100g}</li>
-      </ul>
+            <Typography color="text.secondary" gutterBottom>
+              {product.brands || 'Unknown Brand'}
+            </Typography>
 
-      <button onClick={handleSaveToggle}>
-        {isSaved ? '★ Remove from Saved' : '☆ Save to My List'}
-      </button>
-    </div>
+            <Button
+              variant={isSaved ? 'outlined' : 'contained'}
+              color={isSaved ? 'error' : 'primary'}
+              startIcon={
+                isSaved ? <BookmarkRemoveIcon /> : <BookmarkAddIcon />
+              }
+              onClick={handleSaveToggle}
+              sx={{ mt: 1 }}
+            >
+              {isSaved ? 'Remove from Saved' : 'Save to My List'}
+            </Button>
+          </Box>
+        </Box>
+
+        <Typography variant="h6" gutterBottom>
+          Nutrition per 100g
+        </Typography>
+
+        <Divider sx={{ mb: 2 }} />
+
+        <Typography>Calories: {n['energy-kcal_100g']}</Typography>
+        <Typography>Protein: {n.proteins_100g}</Typography>
+        <Typography>Carbs: {n.carbohydrates_100g}</Typography>
+        <Typography>Sugars: {n.sugars_100g}</Typography>
+        <Typography>Fat: {n.fat_100g}</Typography>
+        <Typography>Salt: {n.salt_100g}</Typography>
+      </Paper>
+    </Container>
   )
 }
 
